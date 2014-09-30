@@ -7,6 +7,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 
 import org.flywaydb.core.Flyway;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +19,12 @@ import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.Database;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.servlet.configuration.EnableWebMvcSecurity;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
@@ -32,7 +39,9 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
 @EnableJpaRepositories("br.com.llongo.persistence.repository")
 @EnableTransactionManagement
 @PropertySource("classpath:application.properties")
-public class Config {
+@EnableWebMvcSecurity
+@EnableGlobalMethodSecurity(prePostEnabled = true)
+public class Config extends WebSecurityConfigurerAdapter {
 	private static final String PROPERTY_NAME_DATABASE_DRIVER = "db.driver";
 	private static final String PROPERTY_NAME_DATABASE_PASSWORD = "db.password";
 	private static final String PROPERTY_NAME_DATABASE_URL = "db.url";
@@ -44,6 +53,27 @@ public class Config {
 	@Resource
 	private Environment env;
 
+	@Autowired
+	public void configureGlobal(AuthenticationManagerBuilder auth)
+			throws Exception {
+		auth.inMemoryAuthentication().withUser("user").password("password")
+				.roles("USER").and().withUser("admin").password("password")
+				.roles("USER", "ADMIN");
+	}
+
+	@Bean
+	@Override
+	public AuthenticationManager authenticationManagerBean() throws Exception {
+		return super.authenticationManagerBean();
+	}
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+		http.authorizeRequests().antMatchers("/resources/**").permitAll()
+				.anyRequest().authenticated().and().formLogin()
+				.loginPage("/login").permitAll().and().logout().permitAll();
+	}
+
 	@Bean
 	public InternalResourceViewResolver configureInternalResourceViewResolver() {
 		InternalResourceViewResolver resolver = new InternalResourceViewResolver();
@@ -51,13 +81,15 @@ public class Config {
 		resolver.setSuffix(".jsp");
 		return resolver;
 	}
-	
-	 Properties additionalProperties() {
-	      Properties properties = new Properties();
-	      properties.setProperty(PROPERTY_NAME_HIBERNATE_DIALECT, env.getProperty(PROPERTY_NAME_HIBERNATE_DIALECT));
-	      properties.setProperty(PROPERTY_NAME_HIBERNATE_SHOW_SQL, env.getProperty(PROPERTY_NAME_HIBERNATE_SHOW_SQL));
-	      return properties;
-	   }
+
+	Properties additionalProperties() {
+		Properties properties = new Properties();
+		properties.setProperty(PROPERTY_NAME_HIBERNATE_DIALECT,
+				env.getProperty(PROPERTY_NAME_HIBERNATE_DIALECT));
+		properties.setProperty(PROPERTY_NAME_HIBERNATE_SHOW_SQL,
+				env.getProperty(PROPERTY_NAME_HIBERNATE_SHOW_SQL));
+		return properties;
+	}
 
 	@Bean
 	public DataSource dataSource() {
@@ -87,7 +119,8 @@ public class Config {
 
 		HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
 		vendorAdapter.setDatabase(Database.MYSQL);
-		vendorAdapter.setDatabasePlatform(env.getProperty(PROPERTY_NAME_HIBERNATE_DIALECT));
+		vendorAdapter.setDatabasePlatform(env
+				.getProperty(PROPERTY_NAME_HIBERNATE_DIALECT));
 		LocalContainerEntityManagerFactoryBean factory = new LocalContainerEntityManagerFactoryBean();
 		factory.setJpaVendorAdapter(vendorAdapter);
 		factory.setPackagesToScan("br.com.llongo.persistence");

@@ -8,8 +8,17 @@
 <title>TODO</title>
 </head>
 <body>
+<c:if test="${not empty httpServletRequest.remoteUser}" >${httpServletRequest.remoteUser}</c:if>
+<c:if test="${not empty msg}" >${msg}</c:if>
+<form action="create" method="post">
+<input type="text" id="name" name="name"/><br/>
+<textarea rows="4" cols="5" id="description" name="description"></textarea><br/>
+<button type="submit" >Criar</button><br/>
 	<c:forEach var="t" items="${tasks}">
-				<li>${t.name} - ${t.description}</li>
+	<input type="checkbox" value="${t.id}" >
+				${t.name} - ${t.description}</input><br/>
 			</c:forEach>
+			
+</form>
 </body>
 </html>
