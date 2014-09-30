@@ -1,35 +1,20 @@
 package br.com.llongo.persistence.repository;
 
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import br.com.llongo.persistence.entities.Task;
-@Repository
-public class TaskRepository implements MyBaseRepository<Task, Integer>{
+public interface TaskRepository extends JpaRepository<Task, Integer>{
 
-	private EntityManager entityManager;
-	@Autowired
-	public TaskRepository(EntityManager entityManager) {
-		this.entityManager = entityManager;
-	}
 
 
 	@Override
-	public Task findOne(Integer id) {
-		Query createQuery = entityManager.createQuery("SELECT x FROM Task x where  x.id = ?1");
-		createQuery.setParameter(1, id);
-		return (Task) createQuery.getSingleResult();
-	}
+	@Query("SELECT x FROM Task x where  x.id = :id")
+	public Task findOne(@Param("id") Integer id);
 
 
 	@Override
-	public Task save(Task task) {
-		entityManager.persist(task);
-		return task;
-	}
-
+	public Task save(Task task);
 	
 }

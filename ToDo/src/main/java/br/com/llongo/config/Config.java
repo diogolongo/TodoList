@@ -1,5 +1,7 @@
 package br.com.llongo.config;
 
+import java.util.Properties;
+
 import javax.annotation.Resource;
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
@@ -14,7 +16,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
-import org.springframework.orm.jpa.vendor.OpenJpaVendorAdapter;
+import org.springframework.orm.jpa.vendor.Database;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
@@ -26,7 +29,7 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
 @ComponentScan("br.com.llongo")
 // Enables Spring's annotations
 @EnableWebMvc
-@EnableJpaRepositories
+@EnableJpaRepositories("br.com.llongo.persistence.repository")
 @EnableTransactionManagement
 @PropertySource("classpath:application.properties")
 public class Config {
@@ -39,7 +42,8 @@ public class Config {
 	private static final String PROPERTY_NAME_HIBERNATE_SHOW_SQL = "hibernate.show_sql";
 	private static final String PROPERTY_NAME_ENTITYMANAGER_PACKAGES_TO_SCAN = "entitymanager.packages.to.scan";
 	@Resource
-    private Environment env;
+	private Environment env;
+
 	@Bean
 	public InternalResourceViewResolver configureInternalResourceViewResolver() {
 		InternalResourceViewResolver resolver = new InternalResourceViewResolver();
@@ -47,11 +51,19 @@ public class Config {
 		resolver.setSuffix(".jsp");
 		return resolver;
 	}
+	
+	 Properties additionalProperties() {
+	      Properties properties = new Properties();
+	      properties.setProperty(PROPERTY_NAME_HIBERNATE_DIALECT, env.getProperty(PROPERTY_NAME_HIBERNATE_DIALECT));
+	      properties.setProperty(PROPERTY_NAME_HIBERNATE_SHOW_SQL, env.getProperty(PROPERTY_NAME_HIBERNATE_SHOW_SQL));
+	      return properties;
+	   }
 
 	@Bean
 	public DataSource dataSource() {
 		DriverManagerDataSource dataSource = new DriverManagerDataSource();
-		dataSource.setDriverClassName(env.getRequiredProperty(PROPERTY_NAME_DATABASE_DRIVER));
+		dataSource.setDriverClassName(env
+				.getRequiredProperty(PROPERTY_NAME_DATABASE_DRIVER));
 		dataSource.setUrl(env.getRequiredProperty(PROPERTY_NAME_DATABASE_URL));
 		dataSource.setUsername(env
 				.getRequiredProperty(PROPERTY_NAME_DATABASE_USERNAME));
@@ -73,13 +85,15 @@ public class Config {
 	@Bean
 	public EntityManagerFactory entityManagerFactory() {
 
-		OpenJpaVendorAdapter vendorAdapter = new OpenJpaVendorAdapter();
+		HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
+		vendorAdapter.setDatabase(Database.MYSQL);
+		vendorAdapter.setDatabasePlatform(env.getProperty(PROPERTY_NAME_HIBERNATE_DIALECT));
 		LocalContainerEntityManagerFactoryBean factory = new LocalContainerEntityManagerFactoryBean();
 		factory.setJpaVendorAdapter(vendorAdapter);
 		factory.setPackagesToScan("br.com.llongo.persistence");
 		factory.setDataSource(dataSource());
+		factory.setJpaProperties(additionalProperties());
 		factory.afterPropertiesSet();
-
 		return factory.getObject();
 	}
 
