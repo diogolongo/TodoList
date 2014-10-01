@@ -22,9 +22,8 @@ public class Todo {
 	public Todo(TaskRepository taskRepository) {
 		this.taskRepository = taskRepository;
 	}
-	@RequestMapping("/list")
+	@RequestMapping(value="/list",method=RequestMethod.GET)
 	public String list(ModelMap model) {
-//		taskRepository.save(new Task(null, "teste", "testedesc"));
 		model.addAttribute("tasks",taskRepository.findAll());
 		return "todo";
 		
